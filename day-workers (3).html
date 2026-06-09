@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>Day Workers — CORE</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --green:#1B3D2F;--gold:#C8A86E;--bg:#F7F7F5;--card:#fff;
+  --border:#E8E8E4;--text:#1A1A1A;--sub:#6B6B6B;
+  --danger:#C0392B;--r:14px;--sh:0 2px 14px rgba(0,0,0,0.07);
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:80px;}
+
+/* HEADER */
+header{background:var(--green);color:#fff;padding:18px 20px 14px;display:flex;align-items:center;justify-content:space-between;}
+.brand-name{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);font-weight:600;}
+.page-title{font-size:20px;font-weight:700;margin-top:2px;}
+.date-pill{background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);border-radius:8px;padding:6px 12px;font-size:12px;color:rgba(255,255,255,0.9);cursor:pointer;white-space:nowrap;}
+
+/* NAV */
+nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--border);display:flex;z-index:200;padding-bottom:env(safe-area-inset-bottom,0px);}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:9px 4px 7px;gap:2px;border:none;background:none;cursor:pointer;color:var(--sub);font-size:10px;letter-spacing:0.5px;text-transform:uppercase;font-family:inherit;}
+.nav-btn.active{color:var(--green);}
+.nav-icon{font-size:20px;}
+
+/* PAGES */
+.page{display:none;padding:16px;max-width:600px;margin:0 auto;}
+.page.active{display:block;}
+
+/* GENERIC */
+.slabel{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--sub);font-weight:600;margin:20px 0 8px;}
+.card{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);border:1px solid var(--border);overflow:hidden;}
+.field-label{font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--sub);margin-bottom:5px;}
+.empty{text-align:center;padding:32px 16px;color:var(--sub);font-size:14px;}
+.empty .ei{font-size:32px;margin-bottom:8px;}
+.btn-green{background:var(--green);color:#fff;border:none;border-radius:10px;padding:10px 18px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;}
+.btn-outline{background:none;border:1.5px solid var(--border);border-radius:10px;padding:9px 16px;font-size:14px;cursor:pointer;font-family:inherit;}
+.btn-danger{background:none;border:1.5px solid var(--danger);color:var(--danger);border-radius:8px;padding:6px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;}
+input[type=text],input[type=number]{border:1.5px solid var(--border);border-radius:10px;padding:10px 14px;font-size:15px;background:var(--bg);outline:none;width:100%;font-family:inherit;}
+input:focus{border-color:var(--green);}
+
+/* WORKERS PAGE */
+.add-row{display:flex;gap:8px;padding:12px;}
+.add-row input{flex:1;}
+.roster-item{display:flex;align-items:center;padding:12px 16px;gap:12px;border-bottom:1px solid var(--border);}
+.roster-item:last-child{border-bottom:none;}
+.r-face{width:44px;height:44px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0;overflow:hidden;border:2px solid var(--border);}
+.r-face img{width:100%;height:100%;object-fit:cover;}
+.r-name{flex:1;font-size:15px;font-weight:600;}
+.r-del{background:none;border:none;color:#ccc;font-size:22px;cursor:pointer;padding:2px 8px;}
+.r-del:hover{color:var(--danger);}
+
+/* HOME */
+.ws-item{display:flex;align-items:center;padding:11px 14px;gap:12px;border-radius:12px;border:2px solid var(--border);background:#fff;cursor:pointer;transition:all .15s;margin-bottom:6px;}
+.ws-item.selected{border-color:var(--green);background:#F0F4F1;}
+.ws-check{width:22px;height:22px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;}
+.ws-item.selected .ws-check{background:var(--green);border-color:var(--green);color:#fff;}
+.ws-avatar{width:34px;height:34px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;overflow:hidden;border:2px solid #fff;}
+.ws-avatar img{width:100%;height:100%;object-fit:cover;}
+.ws-name{flex:1;font-size:14px;font-weight:500;}
+.ws-earn{font-size:13px;font-weight:700;color:var(--green);}
+.ws-status{font-size:11px;color:var(--sub);margin-top:1px;}
+
+/* LOG CARDS */
+.log-card{background:#fff;border-radius:var(--r);box-shadow:var(--sh);border:1px solid var(--border);margin-bottom:8px;overflow:hidden;}
+.log-header{display:flex;align-items:center;padding:12px 16px;gap:11px;cursor:pointer;}
+.log-avatar{width:38px;height:38px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;overflow:hidden;}
+.log-avatar img{width:100%;height:100%;object-fit:cover;}
+.log-name{font-size:15px;font-weight:600;}
+.log-sub{font-size:11px;color:var(--sub);margin-top:1px;}
+.log-earn .amt{font-size:16px;font-weight:700;color:var(--green);}
+.log-earn .hrs{font-size:10px;color:var(--sub);}
+.chevron{color:var(--sub);font-size:11px;transition:transform .2s;margin-left:6px;}
+.log-card.open .chevron{transform:rotate(180deg);}
+.log-body{display:none;padding:0 16px 16px;border-top:1px solid var(--border);flex-direction:column;gap:14px;}
+.log-card.open .log-body{display:flex;}
+.time-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.time-display{background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:10px 0;font-size:26px;font-weight:700;text-align:center;cursor:pointer;color:var(--green);letter-spacing:2px;}
+.time-display:active{border-color:var(--green);}
+.rate-box{background:#F0F4F1;border-radius:10px;padding:10px 14px;font-size:13px;color:var(--green);font-weight:600;border:1px solid #D4E4DA;}
+.checkin-badge{display:flex;align-items:center;gap:8px;background:#f0f4f1;border-radius:10px;padding:8px 12px;font-size:12px;color:var(--green);font-weight:600;}
+.checkin-badge img{width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid var(--green);cursor:pointer;}
+
+/* DAY PHOTOS */
+.photos-gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:4px;}
+.gallery-thumb{aspect-ratio:1;border-radius:8px;object-fit:cover;width:100%;cursor:pointer;display:block;}
+.photo-ts{font-size:9px;color:var(--sub);text-align:center;margin-top:2px;}
+.add-photo-btn{aspect-ratio:1;border-radius:8px;border:2px dashed var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;background:var(--bg);}
+.add-photo-btn .ap-icon{font-size:22px;}
+.add-photo-btn span{font-size:10px;color:var(--sub);}
+
+/* SUMMARY */
+.sum-card{background:var(--green);border-radius:var(--r);padding:18px 20px;}
+.sum-title{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:12px;}
+.sum-row{display:flex;justify-content:space-between;font-size:14px;padding:3px 0;}
+.sum-name{color:rgba(255,255,255,0.85);}
+.sum-detail{color:rgba(255,255,255,0.45);font-size:11px;margin-left:6px;}
+.sum-amt{font-weight:700;color:var(--gold);}
+.sum-div{height:1px;background:rgba(255,255,255,0.15);margin:10px 0;}
+.sum-total{display:flex;justify-content:space-between;align-items:center;}
+.sum-total-label{font-size:13px;color:rgba(255,255,255,0.65);}
+.sum-total-amt{font-size:24px;font-weight:800;color:#fff;}
+
+/* SETTINGS */
+.settings-rows{padding:14px 16px;display:flex;flex-direction:column;gap:12px;}
+.s-field{display:flex;flex-direction:column;gap:4px;}
+
+/* MODALS */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:flex-end;justify-content:center;}
+.overlay.open{display:flex;}
+.sheet{background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:600px;padding-bottom:env(safe-area-inset-bottom,0px);}
+.sheet-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;border-bottom:1px solid var(--border);}
+.sheet-title{font-size:15px;font-weight:700;}
+.sheet-close{background:none;border:none;font-size:22px;cursor:pointer;color:var(--sub);}
+.btn-done{background:var(--green);color:#fff;border:none;border-radius:8px;padding:7px 20px;font-size:14px;font-weight:600;cursor:pointer;}
+
+/* DRUM */
+.drum-cols{display:flex;justify-content:center;align-items:center;padding:10px 20px 24px;}
+.drum-col-wrap{display:flex;flex-direction:column;align-items:center;flex:1;}
+.drum-col-label{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--sub);font-weight:600;margin-bottom:6px;}
+.drum-mask{position:relative;}
+.drum-mask::before,.drum-mask::after{content:'';position:absolute;left:0;right:0;height:70px;z-index:2;pointer-events:none;}
+.drum-mask::before{top:0;background:linear-gradient(to bottom,rgba(255,255,255,0.95),transparent);}
+.drum-mask::after{bottom:0;background:linear-gradient(to top,rgba(255,255,255,0.95),transparent);}
+.drum-highlight{position:absolute;left:4px;right:4px;top:50%;transform:translateY(-50%);height:70px;border-top:1.5px solid var(--border);border-bottom:1.5px solid var(--border);pointer-events:none;z-index:1;}
+.drum-col{height:210px;overflow-y:scroll;scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;width:100px;scrollbar-width:none;position:relative;}
+.drum-col::-webkit-scrollbar{display:none;}
+.drum-item{height:70px;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:500;scroll-snap-align:center;color:#ddd;}
+.drum-item.active{color:var(--text);font-size:36px;font-weight:700;}
+.drum-sep{font-size:32px;font-weight:700;align-self:center;padding:0 4px;margin-bottom:0;}
+
+/* CALENDAR */
+.cal-nav-row{display:flex;align-items:center;gap:8px;}
+.cal-nav-row button{background:none;border:1.5px solid var(--border);border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:14px;}
+.cal-month{font-size:13px;font-weight:700;min-width:110px;text-align:center;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;padding:8px 16px 20px;}
+.cal-dow{font-size:10px;text-align:center;color:var(--sub);font-weight:600;padding:4px 0;}
+.cal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:14px;cursor:pointer;font-weight:500;position:relative;}
+.cal-day:hover{background:var(--bg);}
+.cal-day.today{color:var(--green);font-weight:800;}
+.cal-day.selected{background:var(--green);color:#fff;}
+.cal-day.has-data::after{content:'';width:4px;height:4px;border-radius:50%;background:var(--gold);position:absolute;bottom:2px;}
+.cal-day.other{color:#ccc;}
+
+/* CHECK-IN MODAL */
+.checkin-inner{padding:20px;display:flex;flex-direction:column;gap:14px;}
+.checkin-compare{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.ci-face-wrap{display:flex;flex-direction:column;gap:5px;}
+.face-label{font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--sub);text-align:center;}
+.ci-face{border-radius:12px;overflow:hidden;aspect-ratio:3/4;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;color:var(--sub);font-size:12px;}
+.ci-face img{width:100%;height:100%;object-fit:cover;}
+.btn-confirm{background:var(--green);color:#fff;border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;cursor:pointer;width:100%;font-family:inherit;}
+.btn-retry{background:none;border:1.5px solid var(--border);border-radius:12px;padding:11px;font-size:14px;cursor:pointer;width:100%;font-family:inherit;}
+
+/* ADD WORKER MODAL */
+.aw-inner{padding:20px;display:flex;flex-direction:column;gap:14px;}
+.photo-capture{width:100%;aspect-ratio:3/2;border-radius:12px;border:2px dashed var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;overflow:hidden;background:var(--bg);position:relative;}
+.photo-capture img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.pc-icon{font-size:36px;color:var(--sub);}
+.pc-hint{font-size:12px;color:var(--sub);}
+
+/* LIGHTBOX */
+.lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:900;align-items:center;justify-content:center;flex-direction:column;}
+.lightbox.open{display:flex;}
+.lightbox img{max-width:96%;max-height:80vh;border-radius:12px;object-fit:contain;}
+.lightbox-ts{color:rgba(255,255,255,0.5);font-size:12px;margin-top:10px;}
+.lightbox-close{position:absolute;top:20px;right:20px;background:rgba(255,255,255,0.15);border:none;color:#fff;font-size:20px;width:40px;height:40px;border-radius:50%;cursor:pointer;}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="brand-name">CORE</div>
+    <div class="page-title" id="page-title">Day Workers</div>
+  </div>
+  <div class="date-pill" id="date-pill" onclick="openCal()">—</div>
+</header>
+
+<!-- HOME -->
+<div class="page active" id="page-home">
+  <div id="home-content"></div>
+</div>
+
+<!-- WORKERS -->
+<div class="page" id="page-workers">
+  <div class="slabel">Add Worker</div>
+  <div class="card">
+    <div class="add-row">
+      <input type="text" id="new-name" placeholder="Worker name…" autocomplete="off" onkeydown="if(event.key==='Enter')openAddWorker()"/>
+      <button class="btn-green" onclick="openAddWorker()">+ Add</button>
+    </div>
+  </div>
+  <div class="slabel">Roster</div>
+  <div class="card" id="roster-list"></div>
+</div>
+
+<!-- SETTINGS -->
+<div class="page" id="page-settings">
+  <div class="slabel">Pay Rates</div>
+  <div class="card">
+    <div class="settings-rows">
+      <div class="s-field"><div class="field-label">Short shift rate (R/hr)</div><input type="number" id="cfg-short" value="20" min="0" step="0.5" onchange="saveCfg()"/></div>
+      <div class="s-field"><div class="field-label">Long shift rate (R/hr)</div><input type="number" id="cfg-long" value="28" min="0" step="0.5" onchange="saveCfg()"/></div>
+      <div class="s-field"><div class="field-label">Long shift threshold (hours)</div><input type="number" id="cfg-thresh" value="6" min="1" step="0.5" onchange="saveCfg()"/></div>
+    </div>
+  </div>
+  <div class="slabel">About</div>
+  <div class="card" style="padding:14px 16px;font-size:13px;color:var(--sub);line-height:1.8;">
+    Day Workers — CORE<br/>
+    All data saved locally on this device.
+  </div>
+</div>
+
+<nav>
+  <button class="nav-btn active" id="nav-home" onclick="showPage('home')"><span class="nav-icon">🏠</span>Home</button>
+  <button class="nav-btn" id="nav-workers" onclick="showPage('workers')"><span class="nav-icon">👷</span>Workers</button>
+  <button class="nav-btn" id="nav-settings" onclick="showPage('settings')"><span class="nav-icon">⚙️</span>Settings</button>
+</nav>
+
+<!-- DRUM MODAL -->
+<div class="overlay" id="drum-overlay">
+  <div class="sheet">
+    <div class="sheet-header">
+      <div class="sheet-title" id="drum-title">Set Time</div>
+      <button class="btn-done" onclick="drumConfirm()">Done</button>
+    </div>
+    <div class="drum-cols">
+      <div class="drum-col-wrap">
+        <div class="drum-col-label">Hour</div>
+        <div class="drum-mask">
+          <div class="drum-highlight"></div>
+          <div class="drum-col" id="drum-h"></div>
+        </div>
+      </div>
+      <div class="drum-sep">:</div>
+      <div class="drum-col-wrap">
+        <div class="drum-col-label">Minute</div>
+        <div class="drum-mask">
+          <div class="drum-highlight"></div>
+          <div class="drum-col" id="drum-m"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CALENDAR MODAL -->
+<div class="overlay" id="cal-overlay">
+  <div class="sheet">
+    <div class="sheet-header">
+      <div class="cal-nav-row">
+        <button onclick="calPrev()">‹</button>
+        <div class="cal-month" id="cal-month">—</div>
+        <button onclick="calNext()">›</button>
+      </div>
+      <div class="sheet-title">Pick Date</div>
+      <button class="sheet-close" onclick="closeCal()">✕</button>
+    </div>
+    <div class="cal-grid" id="cal-grid"></div>
+  </div>
+</div>
+
+<!-- ADD WORKER MODAL -->
+<div class="overlay" id="aw-overlay">
+  <div class="sheet">
+    <div class="sheet-header">
+      <div class="sheet-title">New Worker</div>
+      <button class="sheet-close" onclick="closeAW()">✕</button>
+    </div>
+    <div class="aw-inner">
+      <div class="s-field"><div class="field-label">Name</div><input type="text" id="aw-name" placeholder="Full name…" style="margin-top:4px"/></div>
+      <div>
+        <div class="field-label">Face Photo <span style="color:var(--sub);font-weight:400">(optional, recommended)</span></div>
+        <div class="photo-capture" id="aw-photo-box" onclick="document.getElementById('aw-photo-input').click()" style="margin-top:5px;">
+          <span class="pc-icon">📸</span><span class="pc-hint">Tap to take photo</span>
+          <input type="file" id="aw-photo-input" accept="image/*" capture="user" onchange="awPhotoChosen(this)" style="display:none"/>
+        </div>
+      </div>
+      <button class="btn-green" style="width:100%;padding:13px;" onclick="saveNewWorker()">Save Worker</button>
+    </div>
+  </div>
+</div>
+
+<!-- CHECK-IN MODAL -->
+<div class="overlay" id="ci-overlay">
+  <div class="sheet">
+    <div class="sheet-header">
+      <div class="sheet-title" id="ci-title">Check-in</div>
+      <button class="sheet-close" onclick="closeCI()">✕</button>
+    </div>
+    <div class="checkin-inner">
+      <div id="ci-step-photo">
+        <p style="font-size:14px;color:var(--sub);margin-bottom:12px;">Take a face photo of <strong id="ci-name-lbl"></strong> to confirm they're here.</p>
+        <div class="photo-capture" id="ci-photo-box" onclick="document.getElementById('ci-photo-input').click()" style="aspect-ratio:3/4;">
+          <span class="pc-icon">📸</span><span class="pc-hint">Tap to open camera</span>
+          <input type="file" id="ci-photo-input" accept="image/*" capture="user" onchange="ciPhotoChosen(this)" style="display:none"/>
+        </div>
+        <button class="btn-outline" style="width:100%;margin-top:10px;" onclick="ciSkip()">Skip — log without photo</button>
+      </div>
+      <div id="ci-step-confirm" style="display:none">
+        <div class="checkin-compare">
+          <div class="ci-face-wrap"><div class="face-label">On file</div><div class="ci-face" id="ci-face-file"></div></div>
+          <div class="ci-face-wrap"><div class="face-label">Today</div><div class="ci-face" id="ci-face-today"></div></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">
+          <button class="btn-confirm" onclick="ciConfirm()">✓ Confirmed — it's them</button>
+          <button class="btn-retry" onclick="ciRetry()">↩ Retake photo</button>
+          <button class="btn-retry" style="color:var(--danger);border-color:var(--danger);" onclick="closeCI()">✕ Not them — cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close">✕</button>
+  <img id="lb-img" src="" alt=""/>
+  <div class="lightbox-ts" id="lb-ts"></div>
+</div>
+
+<script>
+// ── STATE ──
+let workers  = JSON.parse(localStorage.getItem('dw_workers')||'[]');
+let cfg      = JSON.parse(localStorage.getItem('dw_cfg')||'{"short":20,"long":28,"thresh":6}');
+// dayData[key] = { selected:[ids], logs:{id:{timeIn,timeOut,checkinPhoto}}, photos:[{src,ts}] }
+let dayData  = JSON.parse(localStorage.getItem('dw_days')||'{}');
+let currentDate    = new Date();
+let currentDateKey = fmtKey(currentDate);
+let calView        = new Date();
+let drumWId=null, drumField=null;
+let awPhotoData=null;
+let ciWId=null, ciPhotoData=null;
+
+// ── UTILS ──
+function pad(n){return String(n).padStart(2,'0');}
+function fmtKey(d){return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;}
+function initials(n){return n.split(' ').map(x=>x[0]).join('').toUpperCase().slice(0,2);}
+function nowTime(){const n=new Date();return`${pad(n.getHours())}:${pad(n.getMinutes())}`;}
+function getDay(k){if(!dayData[k])dayData[k]={selected:[],logs:{},photos:[]};if(!dayData[k].photos)dayData[k].photos=[];return dayData[k];}
+function saveDay(){localStorage.setItem('dw_days',JSON.stringify(dayData));}
+function saveWorkers(){localStorage.setItem('dw_workers',JSON.stringify(workers));}
+function saveCfg(){
+  cfg={short:+document.getElementById('cfg-short').value||20,long:+document.getElementById('cfg-long').value||28,thresh:+document.getElementById('cfg-thresh').value||6};
+  localStorage.setItem('dw_cfg',JSON.stringify(cfg));renderHome();
+}
+function calcPay(tIn,tOut){
+  if(!tIn||!tOut)return{hours:0,pay:0,rate:0};
+  const[ih,im]=tIn.split(':').map(Number),[oh,om]=tOut.split(':').map(Number);
+  const mins=(oh*60+om)-(ih*60+im);
+  if(mins<=0)return{hours:0,pay:0,rate:0};
+  const h=mins/60,rate=h>=cfg.thresh?cfg.long:cfg.short;
+  return{hours:+h.toFixed(2),pay:+(h*rate).toFixed(2),rate};
+}
+function fmtDate(d){return d.toLocaleDateString('en-ZA',{weekday:'short',day:'numeric',month:'short'});}
+
+// ── PAGES ──
+function showPage(p){
+  ['home','workers','settings'].forEach(x=>{
+    document.getElementById('page-'+x).classList.toggle('active',x===p);
+    document.getElementById('nav-'+x).classList.toggle('active',x===p);
+  });
+  document.getElementById('page-title').textContent={home:'Day Workers',workers:'Workers',settings:'Settings'}[p];
+  if(p==='home')renderHome();
+  if(p==='workers')renderRoster();
+}
+
+// ── INIT ──
+function init(){
+  document.getElementById('cfg-short').value=cfg.short;
+  document.getElementById('cfg-long').value=cfg.long;
+  document.getElementById('cfg-thresh').value=cfg.thresh;
+  updateDatePill();renderHome();
+}
+function updateDatePill(){document.getElementById('date-pill').textContent=fmtDate(currentDate);}
+
+// ── HOME ──
+function renderHome(){
+  const day=getDay(currentDateKey);
+  let html='';
+
+  // Worker select list
+  if(!workers.length){
+    html+=`<div class="empty"><div class="ei">👷</div>No workers yet.<br/><span style="font-size:12px">Go to Workers to add your crew.</span></div>`;
+  } else {
+    html+=`<div class="slabel">Select Workers</div>`;
+    workers.forEach(w=>{
+      const sel=day.selected.includes(w.id);
+      const log=day.logs[w.id]||{};
+      const{pay}=calcPay(log.timeIn,log.timeOut);
+      html+=`<div class="ws-item${sel?' selected':''}" onclick="toggleWorker(${w.id})">
+        <div class="ws-check">${sel?'✓':''}</div>
+        <div class="ws-avatar">${w.photo?`<img src="${w.photo}"/>`:''}${!w.photo?initials(w.name):''}</div>
+        <div style="flex:1">
+          <div class="ws-name">${w.name}</div>
+          ${log.checkinPhoto?`<div class="ws-status">✓ Checked in</div>`:''}
+        </div>
+        ${sel&&pay>0?`<div class="ws-earn">R${pay.toFixed(2)}</div>`:''}
+      </div>`;
+    });
+  }
+
+  // Log cards for selected workers
+  const sel=day.selected.filter(id=>workers.find(w=>w.id===id));
+  if(sel.length){
+    html+=`<div class="slabel">Hours</div>`;
+    sel.forEach(id=>{
+      const w=workers.find(w=>w.id===id);
+      const log=day.logs[id]||{timeIn:'',timeOut:'',checkinPhoto:null};
+      const{pay,hours,rate}=calcPay(log.timeIn,log.timeOut);
+      const subText=log.timeOut?`${log.timeIn} – ${log.timeOut} · ${hours}h`:log.timeIn?`In at ${log.timeIn}`:'No time set';
+      const av=log.checkinPhoto||w.photo||null;
+      html+=`<div class="log-card" id="lc-${id}">
+        <div class="log-header" onclick="toggleLog(${id})">
+          <div class="log-avatar">${av?`<img src="${av}"/>`:''}${!av?initials(w.name):''}</div>
+          <div style="flex:1">
+            <div class="log-name">${w.name}</div>
+            <div class="log-sub">${subText}</div>
+          </div>
+          <div class="log-earn">
+            <div class="amt">${pay>0?'R'+pay.toFixed(2):'—'}</div>
+            <div class="hrs">${hours>0?hours+'h @ R'+rate:''}</div>
+          </div>
+          <div class="chevron">▼</div>
+        </div>
+        <div class="log-body">
+          <div class="time-row">
+            <div>
+              <div class="field-label">Time In</div>
+              <div class="time-display" onclick="openDrum(${id},'timeIn','${log.timeIn||'07:00'}')">${log.timeIn||'--:--'}</div>
+            </div>
+            <div>
+              <div class="field-label">Time Out</div>
+              <div class="time-display" onclick="openDrum(${id},'timeOut','${log.timeOut||'17:00'}')">${log.timeOut||'--:--'}</div>
+            </div>
+          </div>
+          <div>
+            <div class="field-label">Pay</div>
+            <div class="rate-box">${pay>0?`R${rate}/hr · ${hours}h · Total R${pay.toFixed(2)}`:'Set times above to calculate'}</div>
+          </div>
+          ${log.checkinPhoto?`<div>
+            <div class="field-label">Check-in Photo</div>
+            <div class="checkin-badge">
+              <img src="${log.checkinPhoto}" onclick="openLB('${log.checkinPhoto}','Check-in · ${w.name}')"/>
+              <span>Identity confirmed</span>
+            </div>
+          </div>`:''}
+          <div style="display:flex;justify-content:flex-end;">
+            <button class="btn-danger" onclick="removeFromDay(${id})">Remove from today</button>
+          </div>
+        </div>
+      </div>`;
+    });
+  }
+
+  // Day work photos
+  html+=`<div class="slabel">Day's Work Photos</div>
+  <div class="card" style="padding:14px;">
+    <div class="photos-gallery" id="day-photos-gallery">`;
+  day.photos.forEach((p,i)=>{
+    html+=`<div>
+      <img class="gallery-thumb" src="${p.src}" onclick="openLB('${p.src}','${p.ts}')"/>
+      <div class="photo-ts">${p.ts}</div>
+    </div>`;
+  });
+  html+=`<div class="add-photo-btn" onclick="document.getElementById('day-photo-input').click()">
+      <div class="ap-icon">📷</div><span>Add photo</span>
+    </div>
+    </div>
+    <input type="file" id="day-photo-input" accept="image/*" capture="environment" onchange="handleDayPhoto(this)" style="display:none"/>
+  </div>`;
+
+  // Summary
+  if(sel.length){
+    let grand=0;
+    let rows=sel.map(id=>{
+      const w=workers.find(w=>w.id===id);
+      const log=day.logs[id]||{};
+      const{pay,hours,rate}=calcPay(log.timeIn,log.timeOut);
+      grand+=pay;
+      return`<div class="sum-row"><span><span class="sum-name">${w.name}</span><span class="sum-detail">${pay>0?hours+'h @ R'+rate:'No time'}</span></span><span class="sum-amt">${pay>0?'R'+pay.toFixed(2):'—'}</span></div>`;
+    }).join('');
+    html+=`<div class="slabel">Day Summary</div>
+    <div class="sum-card">
+      <div class="sum-title">Today's Pay</div>${rows}
+      <div class="sum-div"></div>
+      <div class="sum-total"><span class="sum-total-label">Total to pay</span><span class="sum-total-amt">R${grand.toFixed(2)}</span></div>
+    </div>`;
+  }
+
+  document.getElementById('home-content').innerHTML=html;
+}
+
+function toggleWorker(id){
+  const day=getDay(currentDateKey);
+  if(day.selected.includes(id)){
+    day.selected=day.selected.filter(s=>s!==id);delete day.logs[id];
+    saveDay();renderHome();
+  } else {
+    // open check-in
+    ciWId=id;ciPhotoData=null;
+    const w=workers.find(w=>w.id===id);
+    document.getElementById('ci-name-lbl').textContent=w.name;
+    document.getElementById('ci-title').textContent=`Check-in: ${w.name}`;
+    document.getElementById('ci-step-photo').style.display='block';
+    document.getElementById('ci-step-confirm').style.display='none';
+    // reset photo box
+    document.getElementById('ci-photo-box').innerHTML=`<span class="pc-icon">📸</span><span class="pc-hint">Tap to open camera</span><input type="file" id="ci-photo-input" accept="image/*" capture="user" onchange="ciPhotoChosen(this)" style="display:none"/>`;
+    document.getElementById('ci-overlay').classList.add('open');
+  }
+}
+function removeFromDay(id){
+  const day=getDay(currentDateKey);
+  day.selected=day.selected.filter(s=>s!==id);delete day.logs[id];
+  saveDay();renderHome();
+}
+function toggleLog(id){const c=document.getElementById('lc-'+id);if(c)c.classList.toggle('open');}
+
+// ── CHECK-IN ──
+function ciPhotoChosen(input){
+  const f=input.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=e=>{
+    ciPhotoData=e.target.result;
+    document.getElementById('ci-photo-box').innerHTML=`<img src="${ciPhotoData}"/><input type="file" id="ci-photo-input" accept="image/*" capture="user" onchange="ciPhotoChosen(this)" style="display:none"/>`;
+    showCIConfirm();
+  };r.readAsDataURL(f);
+}
+function showCIConfirm(){
+  document.getElementById('ci-step-photo').style.display='none';
+  document.getElementById('ci-step-confirm').style.display='block';
+  const w=workers.find(w=>w.id===ciWId);
+  document.getElementById('ci-face-file').innerHTML=w&&w.photo?`<img src="${w.photo}"/>`:`<span style="font-size:32px">👤</span><span style="font-size:11px">No photo on file</span>`;
+  document.getElementById('ci-face-today').innerHTML=ciPhotoData?`<img src="${ciPhotoData}"/>`:`<span style="font-size:32px">📷</span>`;
+}
+function ciSkip(){ciPhotoData=null;showCIConfirm();}
+function ciRetry(){
+  ciPhotoData=null;
+  document.getElementById('ci-step-photo').style.display='block';
+  document.getElementById('ci-step-confirm').style.display='none';
+}
+function ciConfirm(){
+  const day=getDay(currentDateKey);
+  if(!day.selected.includes(ciWId))day.selected.push(ciWId);
+  day.logs[ciWId]={timeIn:nowTime(),timeOut:'',checkinPhoto:ciPhotoData||null};
+  saveDay();
+  document.getElementById('ci-overlay').classList.remove('open');
+  renderHome();
+  setTimeout(()=>{const c=document.getElementById('lc-'+ciWId);if(c)c.classList.add('open');},60);
+}
+function closeCI(){document.getElementById('ci-overlay').classList.remove('open');}
+
+// ── DAY PHOTOS ──
+function handleDayPhoto(input){
+  const f=input.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=e=>{
+    const day=getDay(currentDateKey);
+    const now=new Date();
+    day.photos.push({src:e.target.result,ts:`${pad(now.getHours())}:${pad(now.getMinutes())}`});
+    saveDay();renderHome();
+  };r.readAsDataURL(f);
+}
+
+// ── DRUM ──
+function openDrum(wId,field,cur){
+  drumWId=wId;drumField=field;
+  const[h,m]=(cur||'08:00').split(':').map(Number);
+  document.getElementById('drum-title').textContent=field==='timeIn'?'Set Time In':'Set Time Out';
+  const hCol=document.getElementById('drum-h'),mCol=document.getElementById('drum-m');
+  hCol.innerHTML=Array.from({length:24},(_,i)=>`<div class="drum-item">${pad(i)}</div>`).join('');
+  mCol.innerHTML=Array.from({length:60},(_,i)=>`<div class="drum-item">${pad(i)}</div>`).join('');
+  document.getElementById('drum-overlay').classList.add('open');
+  requestAnimationFrame(()=>{
+    hCol.scrollTop=h*70;mCol.scrollTop=m*70;
+    attachDrumScroll(hCol);attachDrumScroll(mCol);
+  });
+}
+function attachDrumScroll(col){
+  const upd=()=>{const idx=Math.round(col.scrollTop/70);col.querySelectorAll('.drum-item').forEach((el,i)=>el.classList.toggle('active',i===idx));};
+  col.onscroll=upd;upd();
+}
+function drumConfirm(){
+  const hCol=document.getElementById('drum-h'),mCol=document.getElementById('drum-m');
+  const h=Math.min(Math.round(hCol.scrollTop/70),23);
+  const m=Math.min(Math.round(mCol.scrollTop/70),59);
+  const val=`${pad(h)}:${pad(m)}`;
+  const day=getDay(currentDateKey);
+  if(day.logs[drumWId])day.logs[drumWId][drumField]=val;
+  saveDay();
+  document.getElementById('drum-overlay').classList.remove('open');
+  renderHome();
+  setTimeout(()=>{const c=document.getElementById('lc-'+drumWId);if(c)c.classList.add('open');},40);
+}
+document.getElementById('drum-overlay').addEventListener('click',e=>{if(e.target.id==='drum-overlay')drumConfirm();});
+
+// ── CALENDAR ──
+function openCal(){calView=new Date(currentDate);renderCal();document.getElementById('cal-overlay').classList.add('open');}
+function closeCal(){document.getElementById('cal-overlay').classList.remove('open');}
+function calPrev(){calView.setMonth(calView.getMonth()-1);renderCal();}
+function calNext(){calView.setMonth(calView.getMonth()+1);renderCal();}
+function renderCal(){
+  document.getElementById('cal-month').textContent=calView.toLocaleDateString('en-ZA',{month:'long',year:'numeric'});
+  const today=fmtKey(new Date()),first=new Date(calView.getFullYear(),calView.getMonth(),1),last=new Date(calView.getFullYear(),calView.getMonth()+1,0);
+  let h=['Su','Mo','Tu','We','Th','Fr','Sa'].map(d=>`<div class="cal-dow">${d}</div>`).join('');
+  for(let i=0;i<first.getDay();i++)h+=`<div></div>`;
+  for(let d=1;d<=last.getDate();d++){
+    const dt=new Date(calView.getFullYear(),calView.getMonth(),d),key=fmtKey(dt);
+    const isT=key===today,isSel=key===currentDateKey,has=dayData[key]&&(dayData[key].selected?.length>0||dayData[key].photos?.length>0);
+    h+=`<div class="cal-day${isT?' today':''}${isSel?' selected':''}${has?' has-data':''}" onclick="pickDate('${key}')">${d}</div>`;
+  }
+  document.getElementById('cal-grid').innerHTML=h;
+}
+function pickDate(key){
+  currentDateKey=key;const p=key.split('-');
+  currentDate=new Date(+p[0],+p[1]-1,+p[2]);
+  updateDatePill();closeCal();renderHome();
+}
+
+// ── WORKERS PAGE ──
+function openAddWorker(){
+  awPhotoData=null;
+  document.getElementById('aw-name').value=document.getElementById('new-name').value.trim();
+  document.getElementById('aw-photo-box').innerHTML=`<span class="pc-icon">📸</span><span class="pc-hint">Tap to take photo</span><input type="file" id="aw-photo-input" accept="image/*" capture="user" onchange="awPhotoChosen(this)" style="display:none"/>`;
+  document.getElementById('aw-overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('aw-name').focus(),120);
+}
+function closeAW(){document.getElementById('aw-overlay').classList.remove('open');}
+function awPhotoChosen(input){
+  const f=input.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=e=>{
+    awPhotoData=e.target.result;
+    document.getElementById('aw-photo-box').innerHTML=`<img src="${awPhotoData}"/><input type="file" id="aw-photo-input" accept="image/*" capture="user" onchange="awPhotoChosen(this)" style="display:none"/>`;
+  };r.readAsDataURL(f);
+}
+function saveNewWorker(){
+  const name=document.getElementById('aw-name').value.trim();
+  if(!name){document.getElementById('aw-name').focus();return;}
+  workers.push({id:Date.now(),name,photo:awPhotoData||null});
+  saveWorkers();document.getElementById('new-name').value='';
+  closeAW();renderRoster();
+}
+function removeWorker(id){
+  workers=workers.filter(w=>w.id!==id);
+  Object.keys(dayData).forEach(k=>{dayData[k].selected=dayData[k].selected.filter(s=>s!==id);delete dayData[k].logs[id];});
+  saveWorkers();saveDay();renderRoster();renderHome();
+}
+function renderRoster(){
+  const el=document.getElementById('roster-list');
+  if(!workers.length){el.innerHTML='<div class="empty"><div class="ei">👷</div>No workers yet.</div>';return;}
+  el.innerHTML=workers.map(w=>`
+    <div class="roster-item">
+      <div class="r-face">${w.photo?`<img src="${w.photo}"/>`:''}${!w.photo?initials(w.name):''}</div>
+      <div class="r-name">${w.name}</div>
+      <button class="r-del" onclick="removeWorker(${w.id})">×</button>
+    </div>`).join('');
+}
+
+// ── LIGHTBOX ──
+function openLB(src,ts){document.getElementById('lb-img').src=src;document.getElementById('lb-ts').textContent=ts||'';document.getElementById('lightbox').classList.add('open');}
+function closeLightbox(){document.getElementById('lightbox').classList.remove('open');}
+
+init();
+</script>
+</body>
+</html>
